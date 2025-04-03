@@ -3,6 +3,7 @@ package exchangerate
 import (
 	"currencyservice/internal/models"
 	"currencyservice/internal/repo/currencies"
+	"errors"
 )
 
 type Usecase struct {
@@ -13,8 +14,8 @@ func NewUsecase(repo *currencies.Repo) *Usecase {
 	return &Usecase{repo: repo}
 }
 
-func (usecase Usecase) GetCurrency(id int) (models.Currency, error) {
-	currency, err := usecase.repo.GetCurrencyByID(id)
+func (usecase Usecase) GetCurrency(code string) (models.Currency, error) {
+	currency, err := usecase.repo.GetCurrencyByCode(code)
 	if err != nil {
 		return models.Currency{}, err
 	}
@@ -39,19 +40,26 @@ func (usecase Usecase) CreateNewCurrency(code, fullname, sign string) error {
 	return nil
 }
 
-func (usecase Usecase) CreateExchangeRate(idBaseCurrency int, idTargetCurrency int, rate float64) error {
-	if _, err := usecase.repo.GetCurrencyByID(idBaseCurrency); err != nil {
+func (usecase Usecase) CreateExchangeRate(codeBaseCurrency, codeTargetCurrency string, rate float64) error {
+	if _, err := usecase.repo.GetCurrencyByCode(codeBaseCurrency); err != nil {
 		return err
 	}
 
-	if _, err := usecase.repo.GetCurrencyByID(idTargetCurrency); err != nil {
+	if _, err := usecase.repo.GetCurrencyByCode(codeTargetCurrency); err != nil {
 		return err
 	}
 
-	if _, err := usecase.repo.GetExchangeRateByID(idBaseCurrency, idTargetCurrency); err != nil {
-		if err := usecase.repo.AddExchangeRate(idBaseCurrency, idTargetCurrency, rate); err != nil {
-			return err
-		}
+	exchangerate, err := usecase.repo.GetExchangeRateByCodesPair(codeBaseCurrency, codeTargetCurrency)
+	if err != nil && !errors.Is(err, models.ErrorExchangeRateNotFound) {
+		return err
+	}
+
+	if exchangerate.ID != 0 {
+		return models.ErrorExchangeRateAlreadyExists
+	}
+
+	if err := usecase.repo.AddExchangeRate(codeBaseCurrency, codeTargetCurrency, rate); err != nil {
+		return err
 	}
 
 	return nil
@@ -66,8 +74,8 @@ func (usecase Usecase) GetExchangeRates() ([]models.CurrencyExchange, error) {
 	return exchangerates, nil
 }
 
-func (usecase Usecase) GetExchangeRateByID(idBaseCurrency, idTargetCurrency int) (models.CurrencyExchange, error) {
-	exchangerate, err := usecase.repo.GetExchangeRateByID(idBaseCurrency, idTargetCurrency)
+func (usecase Usecase) GetExchangeRateByCodesPair(codeBaseCurrency, codeTargetCurrency string) (models.CurrencyExchange, error) {
+	exchangerate, err := usecase.repo.GetExchangeRateByCodesPair(codeBaseCurrency, codeTargetCurrency)
 	if err != nil {
 		return models.CurrencyExchange{}, err
 	}
@@ -75,16 +83,16 @@ func (usecase Usecase) GetExchangeRateByID(idBaseCurrency, idTargetCurrency int)
 	return exchangerate, nil
 }
 
-func (usecase Usecase) AddExchangeRate(idBaseCurrency, idTargetCurrency int, rate float64) error {
-	if err := usecase.repo.AddExchangeRate(idBaseCurrency, idTargetCurrency, rate); err != nil {
+func (usecase Usecase) AddExchangeRate(codeBaseCurrency, codeTargetCurrency string, rate float64) error {
+	if err := usecase.repo.AddExchangeRate(codeBaseCurrency, codeTargetCurrency, rate); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (usecase Usecase) UpdateExchangeRate(idBaseCurrency, idTargetCurrency int, newRate float64) error {
-	if err := usecase.repo.UpdateExchangeRate(idBaseCurrency, idTargetCurrency, newRate); err != nil {
+func (usecase Usecase) UpdateExchangeRate(codeBaseCurrency, codeTargetCurrency string, newRate float64) error {
+	if err := usecase.repo.UpdateExchangeRate(codeBaseCurrency, codeTargetCurrency, newRate); err != nil {
 		return err
 	}
 
@@ -103,7 +111,7 @@ func (usecase Usecase) GetExchangeCurrencies(codeBaseCurrency, codeTargetCurrenc
 		return models.GetExchangeCurrencies{}, err
 	}
 
-	exchangerate, err := usecase.GetExchangeRateByID(baseCurrency.ID, targetCurrency.ID)
+	exchangerate, err := usecase.GetExchangeRateByCodesPair(codeBaseCurrency, codeTargetCurrency)
 	if err != nil {
 		return models.GetExchangeCurrencies{}, err
 	}

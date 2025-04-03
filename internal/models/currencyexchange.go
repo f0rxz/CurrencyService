@@ -5,7 +5,8 @@ import (
 )
 
 var (
-	ErrorExchangeRateNotFound = errors.New("Exchange rate Not Found")
+	ErrorExchangeRateNotFound      = errors.New("Exchange rate Not Found")
+	ErrorExchangeRateAlreadyExists = errors.New("Exchange rate already exists")
 )
 
 type CurrencyExchange struct {
