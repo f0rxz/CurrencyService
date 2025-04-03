@@ -1,6 +1,12 @@
 package models
 
-import "errors"
+import (
+	"errors"
+)
+
+var (
+	ErrorExchangeRateNotFound = errors.New("Exchange rate Not Found")
+)
 
 type CurrencyExchange struct {
 	ID               int
@@ -9,6 +15,10 @@ type CurrencyExchange struct {
 	Rate             float64
 }
 
-var (
-	ErrorExchangeRateNotFound = errors.New("Exchange rate Not Found")
-)
+type GetExchangeCurrencies struct {
+	BaseCurrency    Currency
+	TargetCurrency  Currency
+	Rate            float64
+	Amount          float64
+	ConvertedAmount float64
+}

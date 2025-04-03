@@ -15,7 +15,6 @@ func NewUsecase(repo *currencies.Repo) *Usecase {
 
 func (usecase Usecase) GetCurrency(id int) (models.Currency, error) {
 	currency, err := usecase.repo.GetCurrencyByID(id)
-
 	if err != nil {
 		return models.Currency{}, err
 	}
@@ -25,7 +24,6 @@ func (usecase Usecase) GetCurrency(id int) (models.Currency, error) {
 
 func (usecase Usecase) GetAllCurrencies() ([]models.Currency, error) {
 	currencies, err := usecase.repo.GetCurrencies()
-
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +59,6 @@ func (usecase Usecase) CreateExchangeRate(idBaseCurrency int, idTargetCurrency i
 
 func (usecase Usecase) GetExchangeRates() ([]models.CurrencyExchange, error) {
 	exchangerates, err := usecase.repo.GetExchangeRates()
-
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +68,6 @@ func (usecase Usecase) GetExchangeRates() ([]models.CurrencyExchange, error) {
 
 func (usecase Usecase) GetExchangeRateByID(idBaseCurrency, idTargetCurrency int) (models.CurrencyExchange, error) {
 	exchangerate, err := usecase.repo.GetExchangeRateByID(idBaseCurrency, idTargetCurrency)
-
 	if err != nil {
 		return models.CurrencyExchange{}, err
 	}
@@ -91,5 +87,32 @@ func (usecase Usecase) UpdateExchangeRate(idBaseCurrency, idTargetCurrency int, 
 	if err := usecase.repo.UpdateExchangeRate(idBaseCurrency, idTargetCurrency, newRate); err != nil {
 		return err
 	}
+
 	return nil
+}
+
+// GET /exchange?from=BASE_CURRENCY_CODE&to=TARGET_CURRENCY_CODE&amount=$AMOUNT
+func (usecase Usecase) GetExchangeCurrencies(codeBaseCurrency, codeTargetCurrency string, amount float64) (models.GetExchangeCurrencies, error) {
+	baseCurrency, err := usecase.repo.GetCurrencyByCode(codeBaseCurrency)
+	if err != nil {
+		return models.GetExchangeCurrencies{}, err
+	}
+
+	targetCurrency, err := usecase.repo.GetCurrencyByCode(codeTargetCurrency)
+	if err != nil {
+		return models.GetExchangeCurrencies{}, err
+	}
+
+	exchangerate, err := usecase.GetExchangeRateByID(baseCurrency.ID, targetCurrency.ID)
+	if err != nil {
+		return models.GetExchangeCurrencies{}, err
+	}
+
+	return models.GetExchangeCurrencies{
+		BaseCurrency:    baseCurrency,
+		TargetCurrency:  targetCurrency,
+		Rate:            exchangerate.Rate,
+		Amount:          amount,
+		ConvertedAmount: amount * exchangerate.Rate,
+	}, nil
 }

@@ -50,6 +50,28 @@ func (repo *Repo) GetCurrencyByID(id int) (models.Currency, error) {
 	return currency, nil
 }
 
+func (repo *Repo) GetCurrencyByCode(code string) (models.Currency, error) {
+	query := `
+		SELECT ID, Code, FullName, Sign FROM Currencies
+		WHERE Code=?
+	`
+	result, err := repo.db.Query(query, code)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.Currency{}, models.ErrorCurrencyNotFound
+		}
+		return models.Currency{}, err
+	}
+
+	currency := models.Currency{}
+	if err := result.Scan(&currency.ID, &currency.Code, &currency.FullName, &currency.Sign); err != nil {
+		return models.Currency{}, err
+	}
+
+	return currency, nil
+}
+
 // GET /currencies
 func (repo *Repo) GetCurrencies() ([]models.Currency, error) {
 	query := `
