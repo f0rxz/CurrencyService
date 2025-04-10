@@ -52,23 +52,17 @@ func (repo *Repo) AddCurrency(code, fullname, sign string) error {
 
 func (repo *Repo) GetCurrencyByCode(code string) (models.Currency, error) {
 	query := `
-		SELECT ID, Code, FullName, Sign FROM Currencies
-		WHERE Code=?
-	`
-	result, err := repo.db.Query(query, code)
-
+        SELECT ID, Code, FullName, Sign FROM Currencies
+        WHERE Code=?
+    `
+	currency := models.Currency{}
+	err := repo.db.QueryRow(query, code).Scan(&currency.ID, &currency.Code, &currency.FullName, &currency.Sign)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.Currency{}, models.ErrorCurrencyNotFound
 		}
 		return models.Currency{}, err
 	}
-
-	currency := models.Currency{}
-	if err := result.Scan(&currency.ID, &currency.Code, &currency.FullName, &currency.Sign); err != nil {
-		return models.Currency{}, err
-	}
-
 	return currency, nil
 }
 
@@ -103,7 +97,7 @@ func (repo *Repo) GetCurrencies() ([]models.Currency, error) {
 // GET /exchangeRates
 func (repo *Repo) GetExchangeRates() ([]models.CurrencyExchange, error) {
 	query := `
-		SELECT ID, BaseCurrencyId, TargetCurrencyId, Rate FROM ExchangeRates
+		SELECT ID, BaseCurrencyCode, TargetCurrencyCode, Rate FROM ExchangeRates
 	`
 
 	result, err := repo.db.Query(query)
@@ -119,7 +113,7 @@ func (repo *Repo) GetExchangeRates() ([]models.CurrencyExchange, error) {
 
 	for result.Next() {
 		exchangerate := models.CurrencyExchange{}
-		if err := result.Scan(&exchangerate.ID, &exchangerate.BaseCurrencyId, &exchangerate.TargetCurrencyId, &exchangerate.Rate); err != nil {
+		if err := result.Scan(&exchangerate.ID, &exchangerate.BaseCurrencyCode, &exchangerate.TargetCurrencyCode, &exchangerate.Rate); err != nil {
 			return nil, err
 		}
 		exchangerates = append(exchangerates, exchangerate)
@@ -141,21 +135,22 @@ func (repo *Repo) GetExchangeRateByCodesPair(codeBaseCurrency, codeTargetCurrenc
 	}
 
 	query := `
-		SELECT ID, BaseCurrencyId, TargetCurrencyId, Rate FROM ExchangeRates
-		WHERE BaseCurrencyId=? AND TargetCurrencyId=?
-	`
-
-	result, err := repo.db.Query(query, baseCurrency.ID, targetCurrency.ID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return models.CurrencyExchange{}, models.ErrorCurrencyNotFound
-		}
-
-		return models.CurrencyExchange{}, err
-	}
+        SELECT ID, BaseCurrencyCode, TargetCurrencyCode, Rate FROM ExchangeRates
+        WHERE BaseCurrencyCode=? AND TargetCurrencyCode=?
+    `
 
 	exchangerate := models.CurrencyExchange{}
-	if err := result.Scan(&exchangerate.ID, &exchangerate.BaseCurrencyId, &exchangerate.TargetCurrencyId, &exchangerate.Rate); err != nil {
+	err = repo.db.QueryRow(query, baseCurrency.Code, targetCurrency.Code).Scan(
+		&exchangerate.ID,
+		&exchangerate.BaseCurrencyCode,
+		&exchangerate.TargetCurrencyCode,
+		&exchangerate.Rate,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.CurrencyExchange{}, models.ErrorExchangeRateNotFound
+		}
 		return models.CurrencyExchange{}, err
 	}
 
@@ -175,10 +170,10 @@ func (repo *Repo) AddExchangeRate(codeBaseCurrency, codeTargetCurrency string, r
 	}
 
 	query := `
-		INSERT INTO ExchangeRates (BaseCurrencyId, TargetCurrencyId, Rate)
+		INSERT INTO ExchangeRates (BaseCurrencyCode, TargetCurrencyCode, Rate)
 		VALUES (?, ?, ?) 
 	`
-	if _, err := repo.db.Exec(query, baseCurrency.ID, targetCurrency.ID, rate); err != nil {
+	if _, err := repo.db.Exec(query, baseCurrency.Code, targetCurrency.Code, rate); err != nil {
 		return err
 	}
 
@@ -198,10 +193,10 @@ func (repo *Repo) UpdateExchangeRate(codeBaseCurrency, codeTargetCurrency string
 	}
 
 	query := `
-		UPDATE ExchangeRates SET Rate = ? WHERE BaseCurrencyId = ? AND TargetCurrencyId = ?
+		UPDATE ExchangeRates SET Rate = ? WHERE BaseCurrencyCode = ? AND TargetCurrencyCode = ?
 	`
 
-	if _, err := repo.db.Exec(query, newRate, baseCurrency.ID, targetCurrency.ID); err != nil {
+	if _, err := repo.db.Exec(query, newRate, baseCurrency.Code, targetCurrency.Code); err != nil {
 		return err
 	}
 

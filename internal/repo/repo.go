@@ -31,11 +31,11 @@ func NewDB() (*sql.DB, error) {
 
 	currencyexchange := `CREATE TABLE IF NOT EXISTS ExchangeRates (
     ID INTEGER PRIMARY KEY AUTOINCREMENT,
-    BaseCurrencyId INTEGER NOT NULL,
-    TargetCurrencyId INTEGER NOT NULL,
+    BaseCurrencyCode VARCHAR(10) NOT NULL,
+    TargetCurrencyCode VARCHAR(10) NOT NULL,
     Rate DECIMAL(6, 4) NOT NULL,
-    FOREIGN KEY (BaseCurrencyId) REFERENCES Currencies(ID) ON DELETE CASCADE,
-    FOREIGN KEY (TargetCurrencyId) REFERENCES Currencies(ID) ON DELETE CASCADE
+    FOREIGN KEY (BaseCurrencyCode) REFERENCES Currencies(ID) ON DELETE CASCADE,
+    FOREIGN KEY (TargetCurrencyCode) REFERENCES Currencies(ID) ON DELETE CASCADE
 	);`
 
 	if _, err := db.Exec(currencyexchange); err != nil {

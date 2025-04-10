@@ -10,10 +10,10 @@ var (
 )
 
 type CurrencyExchange struct {
-	ID               int
-	BaseCurrencyId   int
-	TargetCurrencyId int
-	Rate             float64
+	ID                 int
+	BaseCurrencyCode   string
+	TargetCurrencyCode string
+	Rate               float64
 }
 
 type GetExchangeCurrencies struct {

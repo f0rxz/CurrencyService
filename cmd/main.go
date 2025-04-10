@@ -1,23 +1,35 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
-
+	"currencyservice/internal/controller/httpservice"
 	"currencyservice/internal/repo"
+	"currencyservice/internal/repo/currencies"
+	"currencyservice/internal/usecase/exchangerate"
+	"fmt"
+	"log"
 )
 
 func main() {
-	repository, err := repo.NewDB()
-	defer repository.Close()
-
+	db, err := repo.NewDB()
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		log.Fatalf("Failed to ping database: %v", err)
 	}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "Hello world")
-	})
+	repo := currencies.NewRepo(db)
 
-	http.ListenAndServe(":80", nil)
+	exchangeUsecase := exchangerate.NewUsecase(repo)
+
+	server := httpservice.NewServer(exchangeUsecase)
+
+	server.SetupRoutes()
+
+	fmt.Println("Server is running on port 8080")
+	if err := server.Start(8080); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }
